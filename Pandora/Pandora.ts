@@ -41,7 +41,7 @@ import archiver from 'archiver';
 import cron from 'node-cron';
 import parser, { CronDate, CronExpression } from 'cron-parser';
 import { pathToFileURL } from 'url';
-import { BR_set_file_downloadeable } from '../HttpGiver';
+import { BR_set_file_downloadeable } from './HttpGiver';
 import exp from 'constants';
 import makeWelcome from './makeWelcome';
 import { channel } from 'diagnostics_channel';
