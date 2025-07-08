@@ -46,12 +46,22 @@ import exp from 'constants';
 import makeWelcome from './makeWelcome';
 import { channel } from 'diagnostics_channel';
 import https from 'https';
+import { error } from 'console';
+import { files_io } from './parsing';
 
 
 /*
 @BruhFn - основной наймспайс для этой либы 
 */
 export namespace BruhFn{
+    export function da_net(value: boolean): string{
+        if(value){return "ДА"}else{return "НЕТ"}
+    }
+
+    export enum COLOR{
+        NOTIFICATION = 0x07f,
+        STD_REQUAST = 0x50ff50,
+    }
 
     export function setFrideyScheduler(
         client: Client, 
@@ -59,10 +69,11 @@ export namespace BruhFn{
         messageContent: string, 
         filePath: string,
         cronExpression: string,
+        now: boolean = false,
     ) {
-    
-        const task = cron.schedule(cronExpression, () => {
-            let channel =  client.channels.fetch(channelId);
+        
+        const schedule_body = async () => {
+            let channel = client.channels.cache.get(channelId) as Channel;
             if(channel instanceof TextChannel){
                 channel.send({
                     content: messageContent,
@@ -70,10 +81,20 @@ export namespace BruhFn{
                     });
             }
             low.logHandle("Сообшение на пятницу отправлено");
-        }, {
+        }
+
+        if (now) {
+            schedule_body();
+            return;
+        }
+
+        cron.schedule(cronExpression,
+            schedule_body,
+            {
             timezone: 'Europe/Moscow'
         });
     }
+
 
     /**
     @send_schedule_report - функция для отправки сообшения по дням недели с файлами
@@ -181,6 +202,95 @@ export namespace BruhFn{
      */
     export namespace interect{
 
+        export async function pull_channle_info(interact: ChatInputCommandInteraction) {
+            const { commandName, member, channel } = interact;
+
+            if (commandName !== "pull_channle_info") { return; }
+            if (!(channel instanceof TextChannel)) { return; }
+
+            const about_channle = interact.options.getChannel("target");
+            if (!(about_channle instanceof TextChannel)){ return; }
+
+            const channel_attachment_counter = await (await about_channle.messages.fetch()).size;
+            let counter_value: string;
+            if(channel_attachment_counter > 1000){ counter_value = "больше 1000" }
+            else{counter_value = channel_attachment_counter.toString()}
+
+
+            interact.reply({ embeds: [ new EmbedBuilder()
+                .setTitle(`Информация о ${about_channle?.name}`)
+                .setColor(COLOR.STD_REQUAST)
+                .addFields(
+                    { name: 'Количество медия:', value: counter_value, inline: true },
+                    { name: 'Дата создания:', value: about_channle.createdAt.toLocaleDateString(), inline: true },
+                    { name: "NSFW", value: da_net(about_channle.nsfw), inline: false },
+                )
+            ]})
+        }
+
+        export async function merge_channles(interact: ChatInputCommandInteraction) {
+            const { commandName, member, channel } = interact;
+
+            if (commandName !== "merge_channles") { return; }
+            if (!(channel instanceof TextChannel)) { return; }
+            if (!(member instanceof GuildMember)) { return; }
+            if (!(member.permissions.has(PermissionsBitField.Flags.BanMembers))) { return; }
+
+            const channel_export = interact.options.getChannel("from") as TextChannel;
+            const channel_import = interact.options.getChannel("to") as TextChannel;
+            
+            const merge_note = new EmbedBuilder()
+                .setTitle('Здесь было произведено слияние каналов')
+                .setDescription(`${channel_export.name} => ${channel_import.name}`)
+                .setColor(COLOR.NOTIFICATION)
+            
+
+            if (!channel_export || !channel_import) {
+                console.error('Source or target channel not found');
+                return;
+            }
+
+            await interact.reply("Выполняется слияние");
+
+            const messages = await channel_export.messages.fetch();
+            const mediaMessages = messages.filter(msg => msg.attachments.size > 0);
+
+            for (const message of mediaMessages.values()) {
+                const attachments = message.attachments.map(attachment => attachment.url);
+                for (const url of attachments) {
+                    const f_name = `tmp/${(url.match(/\/([^\/]+\.[a-zA-Z0-9]+)(\?.*)?$/) as RegExpExecArray)[1]}`;// it is a MAGIC
+                    const file = fs.createWriteStream(f_name);
+                    await new Promise((resolve, reject) => {
+                        const file = fs.createWriteStream(f_name);
+                        https.get(url, (response) => {
+                            if (response.statusCode !== 200) {
+                                reject(new Error(`Failed to get '${url}' (${response.statusCode})`));
+                                return;
+                            }
+                            response.pipe(file);
+                            file.on('finish', () => {
+                                file.close(resolve); // Закрываем файл и разрешаем промис
+                            });
+                        }).on('error', (err) => {
+                            fs.unlink(f_name, () => reject(err)); // Удаляем файл при ошибке
+                        });
+                    });
+                    await channel_import.send({files: [f_name]});
+                    await fs.unlink(f_name, (error) => {
+                        if(error != null){
+                            interact.editReply(error.message);
+                        }
+                    });
+                    low.logHandle(`${f_name} merged from ${channel_export.name} to ${channel_import.name}`)
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                }
+            }
+            channel_import.send({ embeds: [merge_note]});
+            interact.editReply({ embeds: [merge_note.setTitle("Слияние успешно выполнено")]})
+
+        }
+
+
         interface AnimeImage {
             jpg: {
                 large_image_url: string;
@@ -197,81 +307,77 @@ export namespace BruhFn{
             data: Anime[];
         }
 
+        export async function add_anime(interact: ChatInputCommandInteraction, filepath: string) {
+            const { commandName, channel } = interact;
 
-        export async function random_anime_from_txt(interact: ChatInputCommandInteraction) {
+            if (commandName !== 'add_anime_to_bank') { return; }
+            if (!(channel instanceof TextChannel)) { return; }
+
+            await interact.reply("Подожди...");
+
+            const titles = interact.options.getString("anime")?.split(";") as string[];
+            let reply_embed = new EmbedBuilder().setTitle("Аниме добавлено:").setColor(COLOR.STD_REQUAST);
+            const fields: { name: string; value: string; }[] = []; // Инициализация массива fields
+
+            for (const title of titles) {
+                files_io.add_anime_to_file(filepath, title);
+                fields.push({ name: title, value: '\u200B' }); // Добавление поля с пустым значением
+            }
+
+            reply_embed.addFields(fields); // Добавление всех полей в embed
+
+            // Отправка embed в канал
+            await interact.editReply({embeds: [reply_embed]});
+        }
+        export async function random_anime_from_txt(interact: ChatInputCommandInteraction, filepath: string) {
             const { commandName, channel } = interact;
 
             if (commandName !== "random_anime") { return; }
             if (!(channel instanceof TextChannel)) { return; }
 
-            const url = interact.options.getString("url");
-            if (url) {
-                // Извлекаем ID канала и ID сообщения из URL
-                const regex = /https:\/\/discord\.com\/channels\/(\d+)\/(\d+)\/(\d+)/;
-                const match = url.match(regex);
+            try {
+                // Получаем канал и сообщение
+                const f_q_lines = fs.readFileSync(filepath, 'utf-8').split('\n').length;
 
-                if (match) {
-                    const guildId = match[1];
-                    const channelId = match[2];
-                    const messageId = match[3];
 
-                    try {
-                        // Получаем канал и сообщение
-                        const targetChannel = await channel.guild.channels.fetch(channelId) as TextChannel;
-                        const message = await targetChannel.messages.fetch(messageId);
+                if (f_q_lines > 1) {
+                    const animeName = files_io.random_anime_und_move(filepath, Math.floor(Math.random() * (f_q_lines - 1))) as string;
+                    const searchResponse = await fetch(`https://api.jikan.moe/v4/anime?q=${encodeURIComponent(animeName)}&sfw`);
+                    const searchData: SearchResponse = await searchResponse.json() as SearchResponse; // Указываем тип данных
 
-                        // Проверяем наличие вложений
-                        if (message.attachments.size > 0) {
-                            const attachment = message.attachments.first();
-                            if (attachment && attachment.name.endsWith('.txt')) {
-                                const text = await (await fetch(attachment.url)).text();
-                                const lines = text.split('\n').filter(line => line.trim() !== '');
+                    if (searchData && searchData.data.length > 0) {
+                        const animeId = searchData.data[0].mal_id; // Получаем ID первого результата
+                        const bannerUrl = searchData.data[0].images.jpg.large_image_url; // Получаем URL баннера
 
-                                if (lines.length > 0) {
-                                    const animeName = lines[Math.floor(Math.random() * lines.length)];
-                                    const searchResponse = await fetch(`https://api.jikan.moe/v4/anime?q=${encodeURIComponent(animeName)}&sfw`);
-                                    const searchData: SearchResponse = await searchResponse.json() as SearchResponse; // Указываем тип данных
+                        console.log(`ID аниме: ${animeId}`);
+                        console.log(`Баннер аниме: ${bannerUrl}`);
+                        if(animeId && bannerUrl){
+                            const reply_entity = new EmbedBuilder()
+                                .setTitle('Думаю вам стоит посмотреть это')
+                                .setDescription(animeName)
+                                .setColor(0x009999)
+                                .setImage(bannerUrl)
 
-                                    if (searchData && searchData.data.length > 0) {
-                                        const animeId = searchData.data[0].mal_id; // Получаем ID первого результата
-                                        const bannerUrl = searchData.data[0].images.jpg.large_image_url; // Получаем URL баннера
-
-                                        console.log(`ID аниме: ${animeId}`);
-                                        console.log(`Баннер аниме: ${bannerUrl}`);
-                                        if(animeId && bannerUrl){
-                                            const reply_entity = new EmbedBuilder()
-                                                .setTitle('Думаю вам стоит посмотреть это')
-                                                .setDescription(animeName)
-                                                .setColor(0x009999)
-                                                .setImage(bannerUrl)
-
-                                            await interact.reply({ embeds: [reply_entity] });
-                                            await low.logHandle(`Запрос на рандомайзинг аниме из файла ${url} выполнен`);
-                                            return;
-                                        } else {
-                                            low.logHandle("Ошибка парсинга данных")
-                                        }
-                                    } else {
-                                        console.log('Аниме не найдено.');
-                                    }
-                                } else {
-                                    await low.send_deletable_reply(interact, `В файле ${attachment.name} ничего нет.`);
-                                }
-                            } else {
-                                await low.send_deletable_reply(interact, "Я умею читать только .txt файлы.");
-                            }
+                            await interact.reply({ embeds: [reply_entity] });
+                            await low.logHandle(`Запрос на рандомайзинг аниме из файла ${filepath} выполнен`);
+                            return;
                         } else {
-                            await low.send_deletable_reply(interact, 'У этого сообщения нет вложений.');
+                            low.logHandle("Ошибка парсинга данных")
                         }
-                    } catch (error) {
-                        console.error(error);
-                        await low.send_deletable_reply(interact, 'Не удалось получить сообщение. Проверьте ссылку.');
+                    } else {
+                        await interact.reply({ embeds: [new EmbedBuilder()
+                                .setTitle('Думаю вам стоит посмотреть это')
+                                .setDescription(animeName)
+                                .setColor(0x009999)
+                            ]
+                        });
                     }
                 } else {
-                    await low.send_deletable_reply(interact, 'Некорректная ссылка на сообщение.');
+                    await low.send_deletable_reply(interact, `В файле ${filepath} ничего нет.`);
                 }
-            } else {
-                await low.send_deletable_reply(interact, 'Пожалуйста, предоставьте ссылку на сообщение с вложенным файлом.');
+            } catch (error) {
+                console.error(error);
+                await low.send_deletable_reply(interact, `Ошибка: ${error as string}`);
             }
         }
 
@@ -292,8 +398,15 @@ export namespace BruhFn{
                     }
                     catch(error) { interect.reply(`Ошибка: ${error as string}`) }
                     return;
+                case "friday_message":
+                    try {
+                        interect.reply("Пробуем вызвать setFrideyScheduler()");
+                        setFrideyScheduler(client, channel.id, "Тестовая проверка", "./assets/za_pivom.gif", "", true);
+                    } 
+                    catch(error) { interect.editReply(`Ошибка: ${error as string}`)}
+                    return;
                 default:
-                    low.send_deletable_reply(interect, "Функция не найдена")
+                    low.send_deletable_reply(interect, "Функция не найдена");
             }
         }
 
@@ -533,10 +646,20 @@ export namespace BruhFn{
                 await channel.send({
                     content: `Добро пожаловать ${member}!`,
                     files: [`./tmp/${member.id}.gif`]
-            })}
+                })}
             }catch(error){
                 console.error('При обработке нового пользователя возникла ошибка:', error)
             };
+
+            for(const tmp_file of [`./tmp/${member.id}.png`, `./tmp/${member.id}.gif`]){
+                fs.unlink(tmp_file, (error) => {
+                    if(error != null){
+                        low.logHandle(`Error: MakeWelko: fail to delit tmp file: ${error.message}`);
+                    }else{
+                        low.logHandle(`Временный файл ${tmp_file} удалён.`)
+                    }
+                });
+            }
         }
 
         export async function LeaveMember(member: GuildMember | PartialGuildMember, channelId: string): Promise<void> {
@@ -572,7 +695,7 @@ export namespace BruhFn{
     /**
      * @low - наймспайс с приватными фунциями библиотеки, инкапсулируюшими определённые системные функции
      */
-    namespace low{
+    export namespace low{
         export async function addRole(member: GuildMember, roleId: string, channelId: string): Promise<void> {
             try {
                 const role: Role | undefined = member.guild.roles.cache.get(roleId);
