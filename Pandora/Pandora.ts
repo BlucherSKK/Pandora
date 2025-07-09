@@ -317,18 +317,36 @@ export namespace BruhFn{
 
             const titles = interact.options.getString("anime")?.split(";") as string[];
             let reply_embed = new EmbedBuilder().setTitle("Аниме добавлено:").setColor(COLOR.STD_REQUAST);
-            const fields: { name: string; value: string; }[] = []; // Инициализация массива fields
+            let animes: string[] = []; // Инициализация массива fields
 
             for (const title of titles) {
                 files_io.add_anime_to_file(filepath, title);
-                fields.push({ name: title, value: '\u200B' }); // Добавление поля с пустым значением
+                animes.push(title); // Добавление поля с пустым значением
             }
 
-            reply_embed.addFields(fields); // Добавление всех полей в embed
+            reply_embed.setDescription(animes.join('\n')); // Добавление всех полей в embed
 
             // Отправка embed в канал
             await interact.editReply({embeds: [reply_embed]});
         }
+
+        export async function show_anime_list(interact: ChatInputCommandInteraction, filePath: string) {
+            const { commandName, channel } = interact;
+
+            if (commandName !== "anime_list") { return; }
+            if (!(channel instanceof TextChannel)) { return; }
+
+            const animes = fs.readFileSync(filePath, 'utf-8');
+
+            interact.reply({embeds: [ new EmbedBuilder()
+                .setTitle("Список аниме:")
+                .setColor(COLOR.STD_REQUAST)
+                .setDescription(animes)
+            ]})
+
+
+        }
+
         export async function random_anime_from_txt(interact: ChatInputCommandInteraction, filepath: string) {
             const { commandName, channel } = interact;
 

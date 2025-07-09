@@ -51,9 +51,9 @@ export namespace files_io{
     export function add_anime_to_file(filePath: string, data: string): void {
         fs.appendFile(filePath, data + '\n', (err) => {
             if (err) {
-                console.error('Ошибка при добавлении строки в файл:', err);
+                BruhFn.low.logHandle(`Ошибка при добавлении anime в файл: ${err.message}`);
             } else {
-                console.log('Строка успешно добавлена в файл.');
+                BruhFn.low.logHandle(`Аниме ${data} успешно добавлена в файл ${filePath}`);
             }
         });
     }
