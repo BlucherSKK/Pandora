@@ -32,7 +32,8 @@ import {
     MessagePayload, 
     Routes, 
     GuildChannel,
-    Attachment} from 'discord.js';
+    Attachment,
+    PermissionFlagsBits} from 'discord.js';
 import type { Channel, PartialGuildMember, GuildBasedChannel, REST, ChatInputCommandInteraction, InteractionReplyOptions, InteractionResponse, MessageCreateOptions } from 'discord.js';
 import fetch from 'node-fetch';
 import fs from 'fs';
@@ -201,6 +202,25 @@ export namespace BruhFn{
     @interect - наймспайс с функциями для обработки комманд бота
      */
     export namespace interect{
+        
+        export async function get_log_file(interact: ChatInputCommandInteraction, logfilePath: string) {
+            const { commandName, member, channel } = interact;
+
+            if (commandName !== "get_logs") { return; }
+            if (!(channel instanceof TextChannel)) { return; }
+            if (!(member instanceof GuildMember)) { return; }  
+            if (!(member.permissions.has(PermissionFlagsBits.BanMembers))){ return; }
+
+            interact.reply("Жди");
+
+            member.send({ 
+                embeds: [new EmbedBuilder()
+                    .setTitle("Вот запрошенные логи.")
+                    .setColor(COLOR.STD_REQUAST)],
+                files: [logfilePath]
+                })
+
+        }
 
         export async function pull_channle_info(interact: ChatInputCommandInteraction) {
             const { commandName, member, channel } = interact;
