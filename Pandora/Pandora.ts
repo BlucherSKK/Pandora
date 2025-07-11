@@ -206,7 +206,7 @@ export namespace BruhFn{
         export async function get_log_file(interact: ChatInputCommandInteraction, logfilePath: string) {
             const { commandName, member, channel } = interact;
 
-            if (commandName !== "get_logs") { return; }
+            if (commandName !== "admin_get_logs") { return; }
             if (!(channel instanceof TextChannel)) { return; }
             if (!(member instanceof GuildMember)) { return; }  
             if (!(member.permissions.has(PermissionFlagsBits.BanMembers))){ return; }
@@ -251,7 +251,7 @@ export namespace BruhFn{
         export async function merge_channles(interact: ChatInputCommandInteraction) {
             const { commandName, member, channel } = interact;
 
-            if (commandName !== "merge_channles") { return; }
+            if (commandName !== "admin_merge_channles") { return; }
             if (!(channel instanceof TextChannel)) { return; }
             if (!(member instanceof GuildMember)) { return; }
             if (!(member.permissions.has(PermissionsBitField.Flags.BanMembers))) { return; }
@@ -333,7 +333,7 @@ export namespace BruhFn{
             if (commandName !== 'add_anime_to_bank') { return; }
             if (!(channel instanceof TextChannel)) { return; }
 
-            await interact.reply("Подожди...");
+            //interact.reply("Подожди...");
 
             const titles = interact.options.getString("anime")?.split(";") as string[];
             let reply_embed = new EmbedBuilder().setTitle("Аниме добавлено:").setColor(COLOR.STD_REQUAST);
@@ -347,7 +347,7 @@ export namespace BruhFn{
             reply_embed.setDescription(animes.join('\n')); // Добавление всех полей в embed
 
             // Отправка embed в канал
-            await interact.editReply({embeds: [reply_embed]});
+            await interact.reply({embeds: [reply_embed]});
         }
 
         export async function show_anime_list(interact: ChatInputCommandInteraction, filePath: string) {
@@ -365,6 +365,21 @@ export namespace BruhFn{
             ]})
 
 
+        }
+
+        export async function clear_anime_list(interact: ChatInputCommandInteraction, filePath: string) 
+        {
+            const { member, commandName, channel } = interact;
+
+            if(commandName != "admin_clear_anime_list"){return}
+            if(!(channel instanceof TextChannel)){return}
+            if(!(member instanceof GuildMember)){return}
+            if(!member.permissions.has(PermissionsBitField.Flags.ManageMessages)){return low.send_deletable_reply(interact, "У вас недостаточно прав.")}
+            
+            await fs.writeFileSync(filePath, "", 'utf-8');
+
+            interact.reply("Готово");
+            
         }
 
         export async function random_anime_from_txt(interact: ChatInputCommandInteraction, filepath: string) {
@@ -423,7 +438,7 @@ export namespace BruhFn{
         export async function call_debug(interect: ChatInputCommandInteraction, host: string, client: Client) {
             const { commandName, member, channel } = interect;
             
-            if(commandName != "call_debug"){return}
+            if(commandName != "admin_call_debug"){return}
             if(!(channel instanceof TextChannel)){return}
             if(!(member instanceof GuildMember)){return}
             if(!member.permissions.has(PermissionsBitField.Flags.ManageMessages)){return}
@@ -514,7 +529,7 @@ export namespace BruhFn{
         export async function clear(interect: ChatInputCommandInteraction): Promise<ChatInputCommandInteraction | void> {
             const { commandName, member, channel } = interect;
 
-            if(commandName != "clear"){
+            if(commandName != "admin_clear"){
                 return;
             }
 
