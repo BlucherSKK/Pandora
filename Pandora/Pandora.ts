@@ -458,6 +458,13 @@ export namespace BruhFn{
                     } 
                     catch(error) { interect.editReply(`Ошибка: ${error as string}`)}
                     return;
+                case "member_add":
+                    try{
+                        interect.reply("Вызываю member_add()");
+                        MemberHandler.NewMember(member, channel.id);
+                    }
+                    catch(error) { interect.editReply(`Ошибка: ${error as string}`)}
+                    return;
                 default:
                     low.send_deletable_reply(interect, "Функция не найдена");
             }
@@ -499,8 +506,8 @@ export namespace BruhFn{
             if(commandName != "info"){return}
             if(!(member instanceof GuildMember)){return}
 
-            const version = '1.5.4';
-            const lastUpdate = '2025-22-06';
+            const version = '1.5.5';
+            const lastUpdate = '2025-11-07';
         
             const uptime = time.toString() + ` часов 
             *или часа ну в обшем сами разберётесь кожанные*`;
@@ -677,18 +684,24 @@ export namespace BruhFn{
             await low.addRole(member, '1239845097978204211', '1239995777858797639'); // Используем функцию для добавления роли
         
             await makeWelcome(member.displayName, member.user.displayAvatarURL({ size: 128, extension: 'png' }), 426, 240, `./tmp/${member.id}.png`);
+
+            if (!fs.existsSync('background.gif')) {
+                console.error('Файл background.gif не найден!');
+                return;
+            }
+
         
             await new Promise((resolve) => {
                 Bun.spawn({
                     cmd: [
                         'ffmpeg',
                         '-y',
-                        '-i', './assets/background.gif',
+                        '-i', 'background.gif',
                         '-i', `./tmp/${member.id}.png`,
                         '-filter_complex', 'overlay=0:0',
-                        `./tmp/${member.id}.gif`
+                        `./tmp/${member.id}.gif`,
                     ],
-                    cwd: __dirname,
+                    //cwd: __dirname,
                     onExit: resolve
                 });
             });
@@ -700,19 +713,20 @@ export namespace BruhFn{
                     content: `Добро пожаловать ${member}!`,
                     files: [`./tmp/${member.id}.gif`]
                 })}
+                for(const tmp_file of [`./tmp/${member.id}.png`, `./tmp/${member.id}.gif`]){
+                    fs.unlink(tmp_file, (error) => {
+                        if(error != null){
+                            low.logHandle(`Error: MakeWelko: fail to delit tmp file: ${error.message}`);
+                        }else{
+                            low.logHandle(`Временный файл ${tmp_file} удалён.`)
+                        }
+                    });
+                }
             }catch(error){
-                console.error('При обработке нового пользователя возникла ошибка:', error)
+                low.logHandle(`При обработке нового пользователя возникла ошибка: ${error as string}`)
             };
 
-            for(const tmp_file of [`./tmp/${member.id}.png`, `./tmp/${member.id}.gif`]){
-                fs.unlink(tmp_file, (error) => {
-                    if(error != null){
-                        low.logHandle(`Error: MakeWelko: fail to delit tmp file: ${error.message}`);
-                    }else{
-                        low.logHandle(`Временный файл ${tmp_file} удалён.`)
-                    }
-                });
-            }
+            
         }
 
         export async function LeaveMember(member: GuildMember | PartialGuildMember, channelId: string): Promise<void> {
