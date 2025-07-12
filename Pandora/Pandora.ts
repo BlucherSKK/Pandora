@@ -685,8 +685,8 @@ export namespace BruhFn{
         
             await makeWelcome(member.displayName, member.user.displayAvatarURL({ size: 128, extension: 'png' }), 426, 240, `./tmp/${member.id}.png`);
 
-            if (!fs.existsSync('background.gif')) {
-                console.error('Файл background.gif не найден!');
+            if (!fs.existsSync('./assets/background.gif')) {
+                low.logHandle('Файл background.gif не найден!');
                 return;
             }
 
@@ -696,7 +696,7 @@ export namespace BruhFn{
                     cmd: [
                         'ffmpeg',
                         '-y',
-                        '-i', 'background.gif',
+                        '-i', './assets/background.gif',
                         '-i', `./tmp/${member.id}.png`,
                         '-filter_complex', 'overlay=0:0',
                         `./tmp/${member.id}.gif`,
