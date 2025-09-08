@@ -1,0 +1,28 @@
+{
+  "name": "bruh",
+  "module": "main.ts",
+  "type": "module",
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "@resvg/resvg-js": "^2.6.2",
+    "@types/archiver": "^6.0.3",
+    "archiver": "^7.0.1",
+    "cron": "^4.3.1",
+    "cron-parser": "^5.3.0",
+    "discord.js": "^14.19.3",
+    "ini": "^5.0.0",
+    "node-cron": "^4.1.0",
+    "node-fetch": "^3.3.2",
+    "react": "^19.1.0",
+    "satori": "^0.14.0",
+    "typeorm": "^0.3.25",
+    "ytdl": "^1.4.1",
+    "ytdl-core": "^4.11.5"
+  },
+  "private": true
+}
