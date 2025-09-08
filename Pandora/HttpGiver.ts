@@ -2,7 +2,7 @@ import https from 'https';
 import path, { resolve } from 'path';
 import fs from 'fs';
 
-function sleep(s: number): Promise<void> {
+export function sleep(s: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, s*1000));
 }
 

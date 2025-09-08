@@ -33,8 +33,18 @@ import {
     Routes, 
     GuildChannel,
     Attachment,
-    PermissionFlagsBits} from 'discord.js';
-import type { Channel, PartialGuildMember, GuildBasedChannel, REST, ChatInputCommandInteraction, InteractionReplyOptions, InteractionResponse, MessageCreateOptions } from 'discord.js';
+    PermissionFlagsBits,
+    Guild} from 'discord.js';
+import type { 
+    Channel, 
+    PartialGuildMember, 
+    GuildBasedChannel, 
+    REST, 
+    ChatInputCommandInteraction, 
+    InteractionReplyOptions, 
+    InteractionResponse, 
+    MessageCreateOptions, 
+    User} from 'discord.js';
 import fetch from 'node-fetch';
 import fs from 'fs';
 import path, { resolve } from 'path';
@@ -49,12 +59,17 @@ import { channel } from 'diagnostics_channel';
 import https from 'https';
 import { error } from 'console';
 import { files_io } from './parsing';
+import * as Note from "./note";
+import * as Moder from './moder';
+import * as adminHandler from './adminHandler';
 
+export const ADMIN_CALLABLE_ID = '657872729126469642';
 
 /*
 @BruhFn - основной наймспайс для этой либы 
 */
 export namespace BruhFn{
+
     export function da_net(value: boolean): string{
         if(value){return "ДА"}else{return "НЕТ"}
     }
@@ -62,6 +77,7 @@ export namespace BruhFn{
     export enum COLOR{
         NOTIFICATION = 0x07f,
         STD_REQUAST = 0x50ff50,
+        AHTUNG = 0xff0000,
     }
 
     export function setFrideyScheduler(
@@ -143,7 +159,6 @@ export namespace BruhFn{
     
     export async function AutoArtSaver(client: Client, channelIds: string[],  dir: string, message: Message) {
 
-        const SAVE_DIR = path.join(__dirname, dir);
         let contain: boolean = false;
         for(const ablechanel of channelIds){
             if(ablechanel == message.channel.id){
@@ -154,19 +169,21 @@ export namespace BruhFn{
 
         if (contain && (message.attachments.size != 0)) {
             message.attachments.forEach((attachment) => {
-                const filePath = path.join(SAVE_DIR, attachment.name);
+                const filePath = `${dir}/${message.id}_${attachment.id}_${attachment.name}`;
 
                 // Загружаем файл
+        
                 const file = fs.createWriteStream(filePath);
                 https.get(attachment.url, (response) => {
                     response.pipe(file);
-                    file.on('finish', () => {
-                        file.close();
-                        low.logHandle(`Файл сохранен: ${filePath}`);
-                    });
-                }).on('error', (error) => {
-                    fs.unlink(filePath, () => {}); // Удаляем файл в случае ошибки
-                    low.logHandle(`Ошибка при сохранении файла: ${error.message}`);
+                    
+                });
+                file.on('finish', () => {
+                    file.close();
+                    low.logHandle(`Файл сохранен: ${filePath}`);
+                });
+                file.on('error', (err) => {
+                    low.logHandle(`Ошибка при создании файла: ${err.message}`);
                 });
             });
         
@@ -231,7 +248,39 @@ export namespace BruhFn{
             const about_channle = interact.options.getChannel("target");
             if (!(about_channle instanceof TextChannel)){ return; }
 
-            const channel_attachment_counter = await (await about_channle.messages.fetch()).size;
+            let channel_attachment_counter = 0;
+
+            //костыли на костылях, изза ебучего ограничения в 100 сообшений в апи диса
+            if (about_channle instanceof TextChannel) {
+                let lastMessageId;
+                let beforeMessageId
+
+                try {
+                    while (true) {
+                        if (lastMessageId) {
+                            beforeMessageId = lastMessageId; // Загружаем сообщения до последнего загруженного сообщения
+                        } else {
+                            beforeMessageId = undefined;
+                        }
+
+                        const messages: Collection<string, Message<true>> = await channel.messages.fetch({limit: 100, before: beforeMessageId});
+                        channel_attachment_counter += messages.size;
+
+                        if (messages.size < 100) {
+                            break; // Если меньше 100 сообщений, значит, мы достигли конца
+                        }
+                        
+                        if (messages.size > 0) {
+                            lastMessageId = messages.last()?.id; // Обновляем ID последнего сообщения
+                        } else {
+                            break; // Если сообщений нет, выходим из цикла
+                        }
+                    }
+                } catch (error) {
+                    console.error('Ошибка при получении сообщений:', error);
+                }
+            }
+
             let counter_value: string;
             if(channel_attachment_counter > 1000){ counter_value = "больше 1000" }
             else{counter_value = channel_attachment_counter.toString()}
@@ -241,7 +290,7 @@ export namespace BruhFn{
                 .setTitle(`Информация о ${about_channle?.name}`)
                 .setColor(COLOR.STD_REQUAST)
                 .addFields(
-                    { name: 'Количество медия:', value: counter_value, inline: true },
+                    { name: 'Количество сообщений:', value: counter_value, inline: true },
                     { name: 'Дата создания:', value: about_channle.createdAt.toLocaleDateString(), inline: true },
                     { name: "NSFW", value: da_net(about_channle.nsfw), inline: false },
                 )
@@ -506,8 +555,8 @@ export namespace BruhFn{
             if(commandName != "info"){return}
             if(!(member instanceof GuildMember)){return}
 
-            const version = '1.5.5';
-            const lastUpdate = '2025-11-07';
+            const version = '1.5.6';
+            const lastUpdate = '2025-19-07';
         
             const uptime = time.toString() + ` часов 
             *или часа ну в обшем сами разберётесь кожанные*`;
@@ -854,8 +903,9 @@ export namespace BruhFn{
                 }
             }
 
-            const currentTime = new Date().toLocaleString();
-            const logEntry = `${currentTime} - ${logContent}\n`; 
+            const CD = new Date();
+
+            const logEntry = `[${CD.toLocaleString('ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}]: ${logContent}\n`;
         
             console.log(logEntry);
             
@@ -894,6 +944,13 @@ export namespace BruhFn{
 
                 return archive;
             });
+        }
+        
+        export function isModerator(member: GuildMember): boolean {
+
+            if(member.permissions.has(PermissionFlagsBits.MuteMembers)){return true;}
+
+            return false;
         }
 
     }
