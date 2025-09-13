@@ -23,6 +23,7 @@ import {
     User} from 'discord.js';
 import { BruhFn } from './Pandora';
 import fs from 'fs';
+import * as adminCommand from "./adminCommand"
 
 export async function message_command_handler(
     msg: Message,
@@ -34,7 +35,8 @@ export async function message_command_handler(
 
     switch(msg.content){
         case "_get_logs":
-            get_log_file(msg, msg.member, log_file);
+            await adminCommand.get_log_file(msg, msg.member, log_file);
+            await msg_reply("Файлы отправлены", true, msg, true);
             break;
         case "_clear_anime_list":
     }
@@ -69,19 +71,7 @@ async function msg_reply(
     
 }
 
-async function get_log_file(message: Message, member: GuildMember, logfilePath: string) {
-    member.send({ 
-        embeds: [new EmbedBuilder()
-            .setTitle("Вот запрошенные логи.")
-            .setColor(BruhFn.COLOR.STD_REQUAST)],
-        files: [logfilePath]
-        });
-}
 
-async function clear_anime_list(msg: Message, filePath: string) {
-    await fs.writeFileSync(filePath, "", 'utf-8');
-    msg.reply("Готово");
-}
 
 export function is_moder_message(message: Message): boolean {
   if (!message.guild || !message.member) return false; // ЛС или отсутствующий member
