@@ -424,49 +424,7 @@ export namespace BruhFn{
         }
         
 
-        /**
-         * @clear - функциия для обработки админской команды на удоление сообшений
-         */
-        export async function clear(interect: ChatInputCommandInteraction): Promise<ChatInputCommandInteraction | void> {
-            const { commandName, member, channel } = interect;
-
-            if(commandName != "admin_clear"){
-                return;
-            }
-
-            const member_as = member as GuildMember;
-            const channel_as = channel as Channel;
-            const arg = interect.options.getInteger('quantity') as number;
-
-            if (arg < 1 || arg > 300) {
-                await low.send_deletable_massage(channel_as, 'Укажите количество сообщений для удаления (от 1 до 300).');
-                return;
-            }
-
-            if (!member_as.permissions.has(PermissionsBitField.Flags.ManageMessages)) {
-                await low.send_deletable_massage(channel_as, 'У вас нет разрешения на удаление сообщений.');
-                return;
-            }
-
-            if (channel_as instanceof TextChannel) {
-                try {
-                    console.log(`Удаляем ${arg} сообщений из канала ${channel_as.name}`);
-
-                    const fetchedMessages = await channel_as.messages.fetch({ limit: arg });
-                    const deletedMessages = await channel_as.bulkDelete(fetchedMessages, true);
-
-                    console.log(`Удалено сообщений: ${deletedMessages.size}`);
-                    low.send_deletable_reply(interect, `Удалено ${deletedMessages.size} сообщений.<:literally1984:1286290240633442425>`);
-                
-                } catch (error) {
-                    console.error('Ошибка при удалении сообщений:', error);
-                    await low.send_deletable_massage(channel_as, 'Произошла ошибка при удалении сообщений.');
-                }
-            } else {
-                await low.send_deletable_massage(channel_as, 'Эта команда доступна только в текстовых каналах.');
-            }
-            
-        }
+        
 
 
         /**
