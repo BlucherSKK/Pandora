@@ -29,7 +29,7 @@ enum AdminCommandRequaType {
     Error,
 }
 
-interface AdminCommandRequa {
+export interface AdminCommandRequa {
     content?: string;
     type: AdminCommandRequaType;
     del_msg?: boolean; // надо ли удолять искомое сообшениее по дефолту да
