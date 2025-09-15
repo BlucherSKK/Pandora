@@ -34,7 +34,8 @@ import {
     GuildChannel,
     Attachment,
     PermissionFlagsBits,
-    Guild} from 'discord.js';
+    Guild,
+    CategoryChannel} from 'discord.js';
 import type { 
     Channel, 
     PartialGuildMember, 
@@ -60,7 +61,6 @@ import https from 'https';
 import { error } from 'console';
 import { files_io } from './parsing';
 import * as Note from "./note";
-import * as Moder from './moder';
 import * as adminHandler from './adminHandler';
 
 export const ADMIN_CALLABLE_ID = '657872729126469642';
@@ -80,24 +80,35 @@ export namespace BruhFn{
         AHTUNG = 0xff0000,
     }
 
-    export function setFrideyScheduler(
+    export async function setFrideyScheduler(
         client: Client, 
         channelId: string, 
         messageContent: string, 
         filePath: string,
         cronExpression: string,
         now: boolean = false,
-    ) {
+        last_msg?: Message
+    ) { 
         
+        if(last_msg instanceof Message){
+            try{
+                await last_msg.delete();
+            } catch (error) {
+                low.logHandle(`Ошибка при удалении прошлого пятничного сообшения "${messageContent}": ${error}`)
+            }
+        }
+
         const schedule_body = async () => {
-            let channel = client.channels.cache.get(channelId) as Channel;
+            let channel = client.channels.cache.get(channelId) as Channel
             if(channel instanceof TextChannel){
-                channel.send({
+                last_msg = await channel.send({
                     content: messageContent,
                     files: [filePath],
                     });
+                low.logHandle("Сообшение на пятницу отправлено");
+                return;    
             }
-            low.logHandle("Сообшение на пятницу отправлено");
+            
         }
 
         if (now) {
@@ -118,7 +129,7 @@ export namespace BruhFn{
       */
     export async function send_schedule_report(dir: string, cron_schedule: string, access_time: number, host: string, channel: TextChannel, client: Client, now: boolean = false) {
         const ReportTask = async () => {
-            let archive_path = "archiv.zip";
+            let archive_path = `archiv_${low.combine_std_date(new Date())}.zip`;
             channel.send({
                     embeds: [{
                         title: "Everyweakly report.",
@@ -328,41 +339,6 @@ export namespace BruhFn{
             }
         }
 
-
-        export async function call_debug(interect: ChatInputCommandInteraction, host: string, client: Client) {
-            const { commandName, member, channel } = interect;
-            
-            if(commandName != "admin_call_debug"){return}
-            if(!(channel instanceof TextChannel)){return}
-            if(!(member instanceof GuildMember)){return}
-            if(!member.permissions.has(PermissionsBitField.Flags.ManageMessages)){return}
-
-            switch (interect.options.getString("name")){
-                case "schedule_repoprt":
-                    try { 
-                        low.send_deletable_reply(interect, "жди пробный запуск schedule_report()");
-                        BruhFn.send_schedule_report("./hentaiStaff","", 24*3600, host, channel, client, true);
-                    }
-                    catch(error) { interect.reply(`Ошибка: ${error as string}`) }
-                    return;
-                case "friday_message":
-                    try {
-                        interect.reply("Пробуем вызвать setFrideyScheduler()");
-                        setFrideyScheduler(client, channel.id, "Тестовая проверка", "./assets/za_pivom.gif", "", true);
-                    } 
-                    catch(error) { interect.editReply(`Ошибка: ${error as string}`)}
-                    return;
-                case "member_add":
-                    try{
-                        interect.reply("Вызываю member_add()");
-                        MemberHandler.NewMember(member, channel.id);
-                    }
-                    catch(error) { interect.editReply(`Ошибка: ${error as string}`)}
-                    return;
-                default:
-                    low.send_deletable_reply(interect, "Функция не найдена");
-            }
-        }
 
         export async function getTimeUntilFriday(interect: ChatInputCommandInteraction) {
             const { commandName, member, channel } = interect;
@@ -657,6 +633,14 @@ export namespace BruhFn{
      * @low - наймспайс с приватными фунциями библиотеки, инкапсулируюшими определённые системные функции
      */
     export namespace low{
+        export function combine_std_date(date: Date): string {
+            const day: string = String(date.getDate()).padStart(2, '0');
+            const month: string = String(date.getMonth() + 1).padStart(2, '0');
+            const year: string = String(date.getFullYear()).slice(-2);
+
+            return `${day}-${month}-${year}`;
+        }
+
         export async function addRole(member: GuildMember, roleId: string, channelId: string): Promise<void> {
             try {
                 const role: Role | undefined = member.guild.roles.cache.get(roleId);
