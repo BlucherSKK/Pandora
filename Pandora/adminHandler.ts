@@ -68,9 +68,9 @@ export async function message_command_handler(
 
 async function msg_reply(
     rep: string, 
-    del_msg: boolean,
+    del_msg: boolean = true,
     msg: Message,
-    del_reply: boolean,
+    del_reply: boolean = true,
     dely_del_rep: number = 10,
 ): Promise<void> {
     let reply = await msg.reply(rep);
@@ -108,6 +108,19 @@ export function is_moder_message(message: Message): boolean {
   if (message.guild.ownerId === message.author.id) return true;
 
   return false;
+}
+
+
+async function handle_admin_requa(req: adminCommand.AdminCommandRequa, msg: Message) {
+    
+    if(req.content !== undefined){
+        msg_reply(req.content, req.del_msg, msg,req.del_rep, req.del_rep_dely)
+    } else {
+        if(req.del_msg == undefined || req.del_msg == true){
+            msg.delete();
+        }
+    }
+    return;
 }
 
 function is_guild_owner(message: Message): boolean {
