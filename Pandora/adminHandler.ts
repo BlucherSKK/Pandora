@@ -28,17 +28,38 @@ import * as adminCommand from "./adminCommand"
 export async function message_command_handler(
     msg: Message,
     log_file: string,
+    anime_list_path: string,
+    host: string,
+    client: Client,
 ): Promise<void> {
     
     if(!(is_moder_message(msg))){return;}
     if(!(msg.member instanceof GuildMember)){return;}
 
-    switch(msg.content){
+    switch(msg.content.split(" ")[0]){
         case "_get_logs":
             await adminCommand.get_log_file(msg, msg.member, log_file);
-            await msg_reply("Файлы отправлены", true, msg, true);
-            break;
+            await msg_reply("Файлы отправлены", true, msg, true, 10);
+            return;
+
         case "_clear_anime_list":
+            await adminCommand.clear_anime_list(msg, anime_list_path);
+            await msg_reply("Аниме лист очишен", true, msg, true, 10);
+            return;
+
+        case "__call_debug":
+            if(is_guild_owner(msg)){
+                const rep = await adminCommand.call_debug(msg, host, client);
+                if(rep){
+                    msg_reply(rep, true, msg, true);
+                }
+            }
+            return;
+        
+        
+        default:
+            return;
+            
     }
 
 
@@ -50,7 +71,7 @@ async function msg_reply(
     del_msg: boolean = true,
     msg: Message,
     del_reply: boolean = true,
-    del_reply_dely: number = 10,
+    dely_del_rep: number = 10,
 ): Promise<void> {
     let reply = await msg.reply(rep);
     if(del_msg){
@@ -67,7 +88,7 @@ async function msg_reply(
             } catch (err) {
                 BruhFn.low.logHandle(err);
             }
-        }, del_reply_dely*1000);
+        }, dely_del_rep * 1000);
     }
     
 }
@@ -100,4 +121,11 @@ async function handle_admin_requa(req: adminCommand.AdminCommandRequa, msg: Mess
         }
     }
     return;
+}
+
+function is_guild_owner(message: Message): boolean {
+    if (!message.guild || !message.member) return false; 
+    if (message.guild.ownerId === message.author.id) return true;
+
+    return false;
 }

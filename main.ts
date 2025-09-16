@@ -16,7 +16,7 @@ import https from "http";
 import path from 'path';
 import {BruhMusic, BruhPlaer, BruhPlaerState} from './Pandora/musicPlaer.ts';
 import { get_moder } from './Pandora/note.ts';
-import { chek_acceptable_message, ModerQueue } from './Pandora/moder.ts';
+import { message_command_handler } from "./Pandora/adminHandler.ts";
 
 
 const client = new Client({
@@ -41,6 +41,8 @@ const rest = new REST({ version: '9' }).setToken(TOKEN);
 const WELKOM_ID = files_io.ini_get_config_value(MAIN_CONFIG_CONTENT, "Channels", "WELKOM")[0];
 const ANIME_LIST = "assets/anime.txt";
 const TMP_DIR = "./tmp";
+const LOGS = "./bruh.log";
+let last_pivo_msg;
 
 /*
     STRING (тип 3): Строка. Используется для текстовых вводов.
@@ -214,6 +216,7 @@ client.on('ready', async () => {
         'А вот и пятница мои shikikanы!',
         './assets/za_pivom.gif',
         "0 0 10 * * 5",
+        last_pivo_msg,
     );
 
     BruhFn.send_schedule_report(
@@ -230,12 +233,11 @@ client.on('ready', async () => {
     };
 });
 
-let Queue = new ModerQueue();
 
 client.on("messageCreate", (message) => {
     BruhFn.AutoArtSaver(client, SAVEABLE_CHANLES_IDS, HENTAI_DIR, message);
 
-    //chek_acceptable_message(message, Queue, ADMIN);
+    message_command_handler(message, LOGS, ANIME_LIST, HOST, client);
 
 });
 
@@ -259,23 +261,11 @@ client.on('interactionCreate', async (interaction) => {
 
         BruhFn.interect.getTimeUntilFriday(interaction as ChatInputCommandInteraction);
 
-        BruhFn.interect.call_debug(interaction as ChatInputCommandInteraction, HOST, client);
-
         BruhFn.interect.random_anime_from_txt(interaction as ChatInputCommandInteraction, ANIME_LIST);
-
-        BruhFn.interect.merge_channles(interaction as ChatInputCommandInteraction);
-
-        BruhFn.interect.pull_channle_info(interaction as ChatInputCommandInteraction);
 
         BruhFn.interect.add_anime(interaction as ChatInputCommandInteraction, ANIME_LIST);
 
         BruhFn.interect.show_anime_list(interaction as ChatInputCommandInteraction, ANIME_LIST);
-
-        BruhFn.interect.get_log_file(interaction as ChatInputCommandInteraction, "bruh.log");
-
-        BruhFn.interect.clear_anime_list(interaction as ChatInputCommandInteraction, ANIME_LIST);
-
-        //BruhMusic.interact.plaer_up(interaction as ChatInputCommandInteraction, Plaer);
 
     }
     else if(interaction.isButton())
