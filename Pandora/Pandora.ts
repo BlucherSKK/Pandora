@@ -78,6 +78,7 @@ export namespace BruhFn{
         NOTIFICATION = 0x07f,
         STD_REQUAST = 0x50ff50,
         AHTUNG = 0xff0000,
+        ADMIN_REQ = 0xdaf527,
     }
 
     export async function setFrideyScheduler(
@@ -277,12 +278,22 @@ export namespace BruhFn{
             if (!(channel instanceof TextChannel)) { return; }
 
             const animes = fs.readFileSync(filePath, 'utf-8');
+            let emd;
 
-            interact.reply({embeds: [ new EmbedBuilder()
-                .setTitle("Список аниме:")
-                .setColor(COLOR.STD_REQUAST)
-                .setDescription(animes)
-            ]})
+            if (animes == ""){
+                emd = {embeds: [ new EmbedBuilder()
+                    .setTitle("Список аниме пуст!")
+                    .setColor(COLOR.STD_REQUAST)
+                ]};
+            } else {
+                emd = {embeds: [ new EmbedBuilder()
+                    .setTitle("Список аниме:")
+                    .setColor(COLOR.STD_REQUAST)
+                    .setDescription(animes)
+                ]};
+            }
+
+            interact.reply(emd);
 
 
         }

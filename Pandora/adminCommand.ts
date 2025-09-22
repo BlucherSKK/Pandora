@@ -51,6 +51,49 @@ export type Requa = AdminCommandRequa | undefined;
     - не отправлять ответы на сообшение внутри себя
  */
 
+export async function command_list(msg: Message): Promise<Requa> {
+    
+    if(!(msg.channel instanceof TextChannel)){return}
+    if(!([ "1286580815903588385", "1284494551897083976", "1239995777858797639", "1386339831809966212"].includes(msg.channel.id))){
+        return {
+            type: AdminCommandRequaType.Error, 
+            content: "Вызов листа админских и модераторских комманд не допустим в общих каналах.",
+            del_msg: true,
+            del_rep: true,
+        }
+    }
+
+    msg.reply({embeds: [{
+        color: BruhFn.COLOR.ADMIN_REQ,
+        title: "Список команд для модерации.",
+        fields: [
+            {
+                name: "_command_list",
+                value: "собственно команда которая вызывает этот лист",
+            },
+            {
+                name: "_get_logs",
+                value: "команда которая отправляет файл с логами бота вам в личку",
+            },
+            {
+                name: "_clear_anime_list",
+                value: "очишает список аниме для рандомайзинга",
+            },
+            {
+                name: "__call_debug <только для админов>",
+                value: "вызывает определённые события для проверки кода",
+            },
+            {
+                name: "__save_from_time <только для админов>",
+                value: "сохраняет артики за определённый период",
+            }
+        ]
+    }
+    ]})
+
+    return {type: AdminCommandRequaType.Ok, del_msg: true};
+}
+
 export async function get_log_file(message: Message, member: GuildMember, logfilePath: string)
 :Promise<AdminCommandRequa> 
 {

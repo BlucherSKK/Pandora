@@ -27,7 +27,8 @@ import {
     call_debug, 
     get_log_file,
     clear_anime_list,
-    OneTimeSaver
+    OneTimeSaver,
+    command_list,
 } from "./adminCommand";
 import type { Requa } from './adminCommand';
 
@@ -55,6 +56,11 @@ export async function message_command_handler(
         case "_clear_anime_list":
             await clear_anime_list(msg, anime_list_path);
             await msg_reply("Аниме лист очишен", true, msg, true, 10);
+            return;
+        
+        case "_command_list":
+            const req = await command_list(msg);
+            await handle_admin_requa(req, msg);
             return;
 
         case "__call_debug":
