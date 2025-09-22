@@ -398,7 +398,7 @@ export namespace BruhFn{
                 low.logHandle("Канал не поддерживает отправку сообщений.");
             }
         }
-        
+    }
 
         
 
@@ -407,94 +407,7 @@ export namespace BruhFn{
          * 
          * @OneTimeSaver - функция сохроняюшая в бота арты за определённый перюд по админской кооманде
          */
-        export async function OneTimeSaver(interect: ChatInputCommandInteraction, channelIds: string[], direkt: string, client: Client) {
-            const { commandName, member, channel } = interect;
-
-            if(commandName != "save_from_date"){return}
-
-            if(!(member instanceof GuildMember)){return}
-
-            if(!(channel instanceof TextChannel)){return}
-
-            const SAVE_DIR = path.join(__dirname, direkt); // Directory to save media files
-        
-            if (!fs.existsSync(SAVE_DIR)) {
-                fs.mkdirSync(SAVE_DIR);
-            }
-        
-            if (!(member ? member.permissions.has(PermissionsBitField.Flags.Administrator) : false)) {
-                return interect.reply('У вас недостаточно прав для выполнения этой команды.');
-            }
-
-            let YYstart: number;
-            let MMstart: number;
-            let DDstart: number;
-            let YYend: number;
-            let MMend: number;
-            let DDend: number;
-            try{
-                YYstart = interect.options.getInteger("yys") as number;
-                MMstart = interect.options.getInteger("mms") as number - 1;
-                DDstart = interect.options.getInteger("dds") as number;
-                YYend = interect.options.getInteger("yye") as number;
-                MMend = interect.options.getInteger("mme") as number - 1;
-                DDend = interect.options.getInteger("dde") as number;
-            } catch(error) {
-                interect.reply(`Ты что за говно ввёл? ${error}`);
-                return;
-            }
-            const startDate = new Date(YYstart, MMstart, DDstart);
-            const endDate = new Date(YYend, MMend, DDend);
-            
-            interect.reply("жди");
-
-            const mediaUrls: string[] = [];
-    
-            for (const channelId of channelIds) {
-                const channel1 = client.channels.cache.get(channelId);
-                if (channel1 instanceof TextChannel) {
-                    try {
-                        const messages = await channel1.messages.fetch({ limit: 100 });
-                        console.log(`Fetched ${messages.size} messages from channel ${channelId}`);
-    
-                        messages.forEach((msg: Message) => {
-                            console.log(`Message created at: ${msg.createdAt}`);
-                            if (msg.createdAt.getTime() >= startDate.getTime() && msg.createdAt.getTime() <= endDate.getTime()) {
-                                console.log(`Message within date range: ${msg.createdAt}`);
-                                msg.attachments.forEach((attachment) => {
-                                    console.log(`Media found: ${attachment.url}`);
-                                    mediaUrls.push(attachment.url);
-                                });
-                            }
-                        });
-                    } catch (error) {
-                        console.error(`Ошибка при получении сообщений из канала ${channelId}:`, error);
-                        return low.send_deletable_massage(channel, 'Произошла ошибка при попытке получить сообщения из канала.');
-                    }
-                }
-            }
-    
-            if (mediaUrls.length === 0) {
-                low.send_deletable_massage(channel, 'За это время ничего не найдено');
-                return;
-            }
-            for (const url of mediaUrls) {
-                try {
-                    const fileName = path.basename(url.split('?')[0]);
-                    const response = await fetch(url);
-                    if(response.body == null){return low.send_deletable_massage(channel, "Ощибка получения тела запроса")};
-                    const fileStream = fs.createWriteStream(path.join(SAVE_DIR, fileName));
-                    response.body.pipe(fileStream);
-                    low.logHandle(`Файл сохранен: ${fileName}`);
-                } catch (error) {
-                    low.logHandle(`Ошибка при скачивании файла ${url}: ${error}`);
-                    return low.send_deletable_massage(channel, `Не удалось скачать файл ${url}.`);
-                }1_000
-            }
-    
-            low.send_deletable_massage(channel, `Сохранено ${mediaUrls.length} медиа файлов в директорию ${SAVE_DIR}.`);
-        }
-    }
+       
     
     
 

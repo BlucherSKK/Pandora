@@ -23,7 +23,13 @@ import {
     User} from 'discord.js';
 import { BruhFn } from './Pandora';
 import fs from 'fs';
-import * as adminCommand from "./adminCommand"
+import {
+    call_debug, 
+    get_log_file,
+    clear_anime_list,
+    OneTimeSaver
+} from "./adminCommand";
+import type { Requa } from './adminCommand';
 
 export async function message_command_handler(
     msg: Message,
@@ -31,31 +37,40 @@ export async function message_command_handler(
     anime_list_path: string,
     host: string,
     client: Client,
+    art_channles: string[],
+    hentei_dir: string,
 ): Promise<void> {
+
+    if(!(msg.content[0] == '_')){return;}
     
     if(!(is_moder_message(msg))){return;}
     if(!(msg.member instanceof GuildMember)){return;}
 
     switch(msg.content.split(" ")[0]){
         case "_get_logs":
-            await adminCommand.get_log_file(msg, msg.member, log_file);
+            await get_log_file(msg, msg.member, log_file);
             await msg_reply("Файлы отправлены", true, msg, true, 10);
             return;
 
         case "_clear_anime_list":
-            await adminCommand.clear_anime_list(msg, anime_list_path);
+            await clear_anime_list(msg, anime_list_path);
             await msg_reply("Аниме лист очишен", true, msg, true, 10);
             return;
 
         case "__call_debug":
             if(is_guild_owner(msg)){
-                const rep = await adminCommand.call_debug(msg, host, client);
-                if(rep){
-                    msg_reply(rep, true, msg, true);
-                }
+                await call_debug(msg, host, client);
+            }
+            msg_reply("Вызов call_debug завершён", true, msg, true);
+            return;
+        case "__save_from_time":
+            if(is_guild_owner(msg)){
+                const req = await OneTimeSaver(msg, art_channles, hentei_dir, client);
+                handle_admin_requa(req, msg);
+            } else {
+                msg_reply("Для преминение этой команды вам нужны права Администратора", true, msg, true)
             }
             return;
-        
         
         default:
             return;
@@ -66,7 +81,7 @@ export async function message_command_handler(
     
 }
 
-async function msg_reply(
+export async function msg_reply(
     rep: string, 
     del_msg: boolean = true,
     msg: Message,
@@ -111,8 +126,10 @@ export function is_moder_message(message: Message): boolean {
 }
 
 
-async function handle_admin_requa(req: adminCommand.AdminCommandRequa, msg: Message) {
-    
+async function handle_admin_requa(req: Requa, msg: Message) {
+
+    if(req == undefined){return;}
+
     if(req.content !== undefined){
         msg_reply(req.content, req.del_msg, msg,req.del_rep, req.del_rep_dely)
     } else {
@@ -122,6 +139,8 @@ async function handle_admin_requa(req: adminCommand.AdminCommandRequa, msg: Mess
     }
     return;
 }
+
+
 
 function is_guild_owner(message: Message): boolean {
     if (!message.guild || !message.member) return false; 

@@ -237,7 +237,7 @@ client.on('ready', async () => {
 client.on("messageCreate", (message) => {
     BruhFn.AutoArtSaver(client, SAVEABLE_CHANLES_IDS, HENTAI_DIR, message);
 
-    message_command_handler(message, LOGS, ANIME_LIST, HOST, client);
+    message_command_handler(message, LOGS, ANIME_LIST, HOST, client, SAVEABLE_CHANLES_IDS, HENTAI_DIR);
 
 });
 
@@ -255,10 +255,6 @@ client.on('interactionCreate', async (interaction) => {
     {
         BruhFn.interect.Info(interaction as ChatInputCommandInteraction, UP_TIME);
 
-        BruhFn.interect.OneTimeSaver(interaction as ChatInputCommandInteraction, SAVEABLE_CHANLES_IDS, HENTAI_DIR, client);
-
-        BruhFn.interect.clear(interaction as ChatInputCommandInteraction);
-
         BruhFn.interect.getTimeUntilFriday(interaction as ChatInputCommandInteraction);
 
         BruhFn.interect.random_anime_from_txt(interaction as ChatInputCommandInteraction, ANIME_LIST);
@@ -266,10 +262,6 @@ client.on('interactionCreate', async (interaction) => {
         BruhFn.interect.add_anime(interaction as ChatInputCommandInteraction, ANIME_LIST);
 
         BruhFn.interect.show_anime_list(interaction as ChatInputCommandInteraction, ANIME_LIST);
-
-    }
-    else if(interaction.isButton())
-    {
 
     }
     
