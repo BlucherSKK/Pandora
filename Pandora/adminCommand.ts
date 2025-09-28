@@ -21,7 +21,8 @@ import {
     ChatInputCommandInteraction, 
     InteractionResponse,  
     User,
-    ALLOWED_SIZES} from 'discord.js';
+    ALLOWED_SIZES,
+    type MessageReplyOptions} from 'discord.js';
 import { BruhFn } from './Pandora';
 import fs from 'fs';
 import path, { resolve } from 'path';
@@ -33,7 +34,7 @@ enum AdminCommandRequaType {
 }
 
 interface AdminCommandRequa {
-    content?: string;
+    content?: string | MessagePayload | MessageReplyOptions;
     type: AdminCommandRequaType;
     del_msg?: boolean; // надо ли удолять искомое сообшениее по дефолту да
     del_rep?: boolean; // надо ли удалять ответ по дефолту да
@@ -51,10 +52,11 @@ export type Requa = AdminCommandRequa | undefined;
     - не отправлять ответы на сообшение внутри себя
  */
 
-export async function command_list(msg: Message): Promise<Requa> {
+
+export async function command_list(msg: Message, accsept_chanles: string[]): Promise<Requa> {
     
     if(!(msg.channel instanceof TextChannel)){return}
-    if(!([ "1286580815903588385", "1284494551897083976", "1239995777858797639", "1386339831809966212"].includes(msg.channel.id))){
+    if(!(accsept_chanles.includes(msg.channel.id))){
         return {
             type: AdminCommandRequaType.Error, 
             content: "Вызов листа админских и модераторских комманд не допустим в общих каналах.",
@@ -63,7 +65,8 @@ export async function command_list(msg: Message): Promise<Requa> {
         }
     }
 
-    msg.reply({embeds: [{
+    return {
+        content: {embeds: [{
         color: BruhFn.COLOR.ADMIN_REQ,
         title: "Список команд для модерации.",
         fields: [
@@ -89,9 +92,87 @@ export async function command_list(msg: Message): Promise<Requa> {
             }
         ]
     }
-    ]})
+    ]},
+    type: AdminCommandRequaType.Ok,
+    del_msg: true,
+    del_rep: false,
+};
+}
 
-    return {type: AdminCommandRequaType.Ok, del_msg: true};
+interface bot_sets{
+    host: string,
+    bot_id: string,
+    server_id: string,
+    admin_channle: string,
+    wellkom: string,
+    saveable_channles: string[],
+    accesapted_chanles: string[],
+}
+
+export async function get_bot_settings(msg: Message, accsept_chanles: string[], info: bot_sets): Promise<Requa> {
+    if(!(msg.channel instanceof TextChannel)){return}
+    if(!(accsept_chanles.includes(msg.channel.id))){
+        return {
+            type: AdminCommandRequaType.Error, 
+            content: "Вызов этой не допустим в общих каналах.",
+            del_msg: true,
+            del_rep: true,
+        }
+    }
+
+
+    let s_channles: string = '';
+    for(const id of info.saveable_channles){
+        s_channles = s_channles + `<#${id}>\n`;
+    }
+
+    let a_channles: string = '';
+    for(const id of info.accesapted_chanles){
+        a_channles = a_channles + `<#${id}>\n`;
+    }
+
+    return {
+        type: AdminCommandRequaType.Ok,
+        content: {embeds: [ new EmbedBuilder()
+            .setTitle("Вот настройки бота в данный момент")
+            .setFields( [
+                {
+                    name: "host",
+                    value: info.host,
+                },
+                {
+                    name: "bot ID",
+                    value: info.bot_id,
+                },
+                {
+                    name: "server ID",
+                    value: info.server_id,
+                },
+                {
+                    name: "main admin channle",
+                    value: `<#${info.admin_channle}>`,
+                    inline: true,
+                },
+                {
+                    name: "welkom channle",
+                    value: `<#${info.wellkom}>`,
+                    inline: true,
+                },
+                {
+                    name: "saveable channles",
+                    value: s_channles,
+                },
+                {
+                    name: "accsepted channles",
+                    value: a_channles,
+                }
+
+            ])
+        ]},
+        del_msg: true,
+        del_rep: false,
+    }
+
 }
 
 export async function get_log_file(message: Message, member: GuildMember, logfilePath: string)
@@ -217,9 +298,10 @@ export async function OneTimeSaver(msg: Message, channelIds: string[], direkt: s
             
             return {content: `Ты что за говно ввёл? ${error}`, type: AdminCommandRequaType.Error};
         }
+
+        
         const startDate = new Date(YYstart, MMstart, DDstart);
         const endDate = new Date(YYend, MMend, DDend);
-        
         const mediaUrls: string[] = [];
 
         for (const channelId of channelIds) {

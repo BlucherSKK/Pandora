@@ -2,7 +2,7 @@
 import { Client, GatewayIntentBits, GuildMember, Message, TextChannel, REST, Routes, SlashCommandBuilder } from 'discord.js';
 import type { ChatInputCommandInteraction, PartialGuildMember } from 'discord.js'
 import makeWelcome from './Pandora/makeWelcome.tsx';
-import { TOKEN } from './test.json';
+import { TOKEN } from './config.json';
 import cron from 'node-cron';
 import parser from 'cron-parser';
 import * as ini from "ini";
@@ -28,13 +28,14 @@ const client = new Client({
         GatewayIntentBits.GuildMembers,
     ],
 });
-let Plaer = new BruhPlaer();
-const MAIN_CONFIG_CONTENT = fs.readFileSync("test.ini", "utf-8");
+
+const MAIN_CONFIG_CONTENT = fs.readFileSync("config.ini", "utf-8");
 const BRUH_ID = files_io.ini_get_config_value(MAIN_CONFIG_CONTENT, "bruh info", "ID")[0]; 
 const GUILD_ID = files_io.ini_get_config_value(MAIN_CONFIG_CONTENT, "bruh info", "SERVER")[0];  
 let UP_TIME = 0;
 const ADMIN_CHANNEL_ID = files_io.ini_get_config_value(MAIN_CONFIG_CONTENT, "Channels", "Admin")[0];
 const SAVEABLE_CHANLES_IDS = files_io.ini_get_config_value(MAIN_CONFIG_CONTENT, "Channels", "Saveable");
+const ACCSEPT_CHANNLES_IDS = files_io.ini_get_config_value(MAIN_CONFIG_CONTENT, "Channels", "ACCSEPT_CHANNLES");
 const HENTAI_DIR = "./hentaiStaff";
 const HOST = files_io.ini_get_config_value(MAIN_CONFIG_CONTENT, "bruh info", "HOST")[0];
 const rest = new REST({ version: '9' }).setToken(TOKEN);
@@ -69,17 +70,9 @@ const COMMANDS = [
         description: 'информация о боте',
     },
     {
-        name: "admin_get_logs",
-        description: "отправляет файл с логами в личку"
-    },
-    {
         name: "anime_list",
         description: "показывает список из которого рандомайзится аниме",
     },
-    /*{
-        name: "plaer_up",
-        description: "создаёт интерфейс для воспроизведения музыки в канале вызова",
-    },*/
     {
         name: 'add_anime_to_bank',
         description: "добовляет аниме в список для рандомайзинга",
@@ -93,18 +86,6 @@ const COMMANDS = [
         ]
     },
     {
-        name: 'admin_clear',
-        description: '<только дл ямодеров> очистка сообшений из канала',
-        options: [
-            {
-                name: 'quantity',
-                description: 'Количество сообшений для удаления',
-                type: 4, // 3 соответствует строковому типу
-                required: true,
-            },
-        ],
-    },
-    {
         name: "random_anime",
         description: "бот выберет рандомное аниме для вас из файла(txt) на сервере",
     },
@@ -112,94 +93,6 @@ const COMMANDS = [
         name: "when_friday",
         description: "...",
     },
-    {
-        name: "admin_clear_anime_list",
-        description: "Очишает лист аниме полностью"
-    },
-    {
-        name: "admin_call_debug",
-        description: "call function now",
-        options: [
-            {
-                name: 'name',
-                description: "function name",
-                type: 3,
-                required: true,
-            }
-        ]
-    },
-    {
-        name: "pull_channle_info",
-        description: "даёт информацию о канале",
-        options:[
-            {
-                name: "target",
-                description: "целевой канала",
-                type: OptionsTypes.CHANNEL,
-                required: true
-            }
-        ]
-    },
-    {
-        name: "admin_merge_channles",
-        description: "выполняет слияне всех вложений из одного канала в другой канала",
-        options: [
-            {
-                name: "from",
-                description: "source channle",
-                type: OptionsTypes.CHANNEL,
-                required: true,
-            },
-            {
-                name: "to",
-                description: "target channle",
-                type: OptionsTypes.CHANNEL,
-                required: true,
-            }
-        ]
-    },
-    {
-        name: "admin_save_from_date",
-        description: "<только для админов> сохроняет все арты за опеределённый перюд",
-        options: [
-            {
-                name: 'yys',
-                description: 'start year',
-                type: 4, 
-                required: true,
-            },
-            {
-                name: 'mms',
-                description: 'start month',
-                type: 4, 
-                required: true,
-            },
-            {
-                name: 'dds',
-                description: 'start day',
-                type: 4, 
-                required: true,
-            },
-            {
-                name: 'yye',
-                description: 'end year',
-                type: 4, 
-                required: true,
-            },
-            {
-                name: 'mme',
-                description: 'end month',
-                type: 4, 
-                required: true,
-            },
-            {
-                name: 'dde',
-                description: 'end day',
-                type: 4, 
-                required: true,
-            },
-        ]
-    }
 ];
 
 BruhFn.regist_commands(COMMANDS, rest, BRUH_ID, GUILD_ID);
@@ -237,7 +130,10 @@ client.on('ready', async () => {
 client.on("messageCreate", (message) => {
     BruhFn.AutoArtSaver(client, SAVEABLE_CHANLES_IDS, HENTAI_DIR, message);
 
-    message_command_handler(message, LOGS, ANIME_LIST, HOST, client, SAVEABLE_CHANLES_IDS, HENTAI_DIR);
+    message_command_handler(message, LOGS, ANIME_LIST, HOST, client, SAVEABLE_CHANLES_IDS, 
+        HENTAI_DIR, ACCSEPT_CHANNLES_IDS,
+        ADMIN_CHANNEL_ID, GUILD_ID, WELKOM_ID, BRUH_ID
+    );
 
 });
 

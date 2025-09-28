@@ -20,7 +20,8 @@ import {
     REST, 
     ChatInputCommandInteraction, 
     InteractionResponse,  
-    User} from 'discord.js';
+    User,
+    type MessageReplyOptions} from 'discord.js';
 import { BruhFn } from './Pandora';
 import fs from 'fs';
 import {
@@ -29,8 +30,10 @@ import {
     clear_anime_list,
     OneTimeSaver,
     command_list,
+    get_bot_settings
 } from "./adminCommand";
 import type { Requa } from './adminCommand';
+import { get } from 'http';
 
 export async function message_command_handler(
     msg: Message,
@@ -40,6 +43,11 @@ export async function message_command_handler(
     client: Client,
     art_channles: string[],
     hentei_dir: string,
+    accsept_chanles: string[],
+    admin_channle_id: string,
+    server: string,
+    welkom_id: string,
+    bot: string,
 ): Promise<void> {
 
     if(!(msg.content[0] == '_')){return;}
@@ -59,8 +67,10 @@ export async function message_command_handler(
             return;
         
         case "_command_list":
-            const req = await command_list(msg);
-            await handle_admin_requa(req, msg);
+            {
+            const req = await command_list(msg, accsept_chanles);
+            handle_admin_requa(req, msg);
+            }
             return;
 
         case "__call_debug":
@@ -78,6 +88,21 @@ export async function message_command_handler(
             }
             return;
         
+        case "_get_bot_settings":
+            {
+            const req = await get_bot_settings(msg, accsept_chanles, {
+                accesapted_chanles: accsept_chanles,
+                admin_channle: admin_channle_id,
+                saveable_channles: art_channles,
+                server_id: server,
+                wellkom: welkom_id,
+                host: host,
+                bot_id: bot,
+            });
+            handle_admin_requa(req, msg);
+            }
+            return;
+
         default:
             return;
             
@@ -88,7 +113,7 @@ export async function message_command_handler(
 }
 
 export async function msg_reply(
-    rep: string, 
+    rep: string | MessagePayload | MessageReplyOptions, 
     del_msg: boolean = true,
     msg: Message,
     del_reply: boolean = true,
